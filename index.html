@@ -404,10 +404,14 @@ async function pager(main, firstUrl, query, mapItem, onPage){
   let next = firstUrl, q = query, list = h("div"); main.append(list);
   const btn = h("button", {class:"pill sec more", style:"display:none"}, "Mehr laden");
   main.append(btn);
+  let errMsg = null;
   async function load(){
     btn.style.display = "none";
+    if (errMsg) { errMsg.remove(); errMsg = null; }
     const l = h("div", {class:"msg"}, "Lädt …"); list.after(l);
-    const d = await api(next, {query:q}); q = null; l.remove();
+    let d;
+    try { d = await api(next, {query:q}); } finally { l.remove(); }
+    q = null;
     const items = (d.items || []).filter(Boolean);
     if (onPage) onPage(items, list);
     if (mapItem) items.forEach((it, i) => { const r = mapItem(it, i); if (r) list.append(r); });
@@ -415,7 +419,11 @@ async function pager(main, firstUrl, query, mapItem, onPage){
     next = d.next; if (next) btn.style.display = "block";
     renderPlayer();
   }
-  btn.onclick = load;
+  btn.onclick = () => load().catch(e => {
+    errMsg = h("div", {class:"msg"}, "Konnte nicht laden: " + e.message);
+    list.after(errMsg);
+    btn.style.display = "block";
+  });
   await load();
 }
 
