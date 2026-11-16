@@ -472,7 +472,7 @@ const VIEWS = {
     let after = null;
     async function load(){
       btn.style.display = "none";
-      const l = loading(main);
+      const l = h("div", {class:"msg"}, "Lädt …"); list.after(l);
       const d = await api("/me/following", {query:{type:"artist", limit:50, after}}); l.remove();
       const a = d.artists || {};
       (a.items||[]).forEach(ar => list.append(row({round:true, img: img(ar.images, 100), title: ar.name, sub:"Künstler",
