@@ -257,7 +257,21 @@ async function ctl(path, method="POST", query){
 }
 const playCtx = (uri, offsetUri) => play(offsetUri ? {context_uri:uri, offset:{uri:offsetUri}} : {context_uri:uri});
 async function shufflePlay(uri){
-  await ctl("/me/player/shuffle", "PUT", {state:true, device_id:LS.get("device")});
+  const shuffleOn = id => api("/me/player/shuffle", {method:"PUT", query:{state:true, device_id:id}});
+  try {
+    await shuffleOn(LS.get("device"));
+  } catch(e) {
+    if (e.status !== 404 && e.reason !== "NO_ACTIVE_DEVICE") return handleErr(e);
+    // Kein aktives Gerät: erst eines suchen, damit nur eine Meldung kommt.
+    const d = await findDevice().catch(()=>null);
+    if (!d) return noDevice();
+    LS.set("device", d.id);
+    const ok = await shuffleOn(d.id).then(()=>true, ()=>false);
+    await playCtx(uri);
+    // Ein ruhendes Gerät nimmt Shuffle evtl. erst an, wenn es spielt.
+    if (!ok) shuffleOn(d.id).catch(()=>{});
+    return;
+  }
   playCtx(uri);
 }
 
