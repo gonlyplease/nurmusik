@@ -341,6 +341,7 @@ $("#sheet").addEventListener("click", e => { if (e.target.id === "sheet") closeS
 
 /* ============ Ansichten ============ */
 let me = null, tab = "playlists", stack = [];
+async function loadMe(){ if (!me) me = await api("/me"); return me; }
 const TABS = [
   ["playlists","♫","Playlists"], ["songs","♥","Songs"], ["albums","◉","Alben"],
   ["artists","☺","Künstler"], ["search","⌕","Suche"]
@@ -541,7 +542,9 @@ const VIEWS = {
         h("button", {class:"pill", onclick: () => playCtx(p.uri)}, "▶ Abspielen"),
         h("button", {class:"pill sec", onclick: () => shufflePlay(p.uri)}, "🔀 Zufall"))));
     // Spotify liefert Songlisten nur für eigene oder gemeinsame Playlists.
-    const mine = me && p.owner && p.owner.id === me.id;
+    await loadMe().catch(()=>null);
+    // Ist das Profil unbekannt, versuchen wir die Songliste trotzdem.
+    const mine = !me || (p.owner && p.owner.id === me.id);
     if (!mine && !p.collaborative) {
       main.append(h("div", {class:"msg"}, "Die Songliste fremder Playlists gibt Spotify nicht mehr heraus, abspielen geht aber."));
       return;
@@ -646,9 +649,10 @@ async function start(){
   }
   if (!LS.get("refresh_token")) return loginScreen();
   shell();
-  try { me = await api("/me"); }
+  try { await loadMe(); }
   catch(e) {
     if (e.status === 403) return loginScreen("Spotify verweigert den Zugriff. Ist dein Konto im Dashboard unter „User Management“ eingetragen und hast du Premium?");
+    toast("Profil konnte nicht geladen werden: " + esc(e.message));
   }
   switchTab(LS.get("tab") || "playlists");
   pollPlayer();
