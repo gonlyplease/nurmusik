@@ -80,21 +80,21 @@ Like the iPod's Now Playing screen:
 │  Album                       │  grey
 │                              │
 │  1:12 ━━━━━━━━──────── -2:31 │  blue progress
-│            3 von 12          │  grey
 │                              │
-│      ⏮       ▶︎/❚❚      ⏭     │  black line icons
+│      ⏮       ▶︎/❚❚      ⏭     │  simple black icons
 │                              │
 │  Zufall: Aus   Wiederh.: Aus │  text toggles, blue when on
 │  Spielt auf: iPhone        › │
 └──────────────────────────────┘
 ```
 
-- Play/previous/next as simple black line icons (drawn in code, not emojis).
+- Play/previous/next as simple solid black icons (drawn in code, not emojis).
+- No "3 von 12": Spotify doesn't report the position of the song in the playlist.
 - Shuffle and repeat as text toggles, because the symbols are easy to confuse.
-- The cover is shown in grey scale? → see open questions.
+- The cover is the official cover in color. It's the only image in the app.
 
 ## Bottom bar (current song)
-- One line: play/pause icon, "Song title – Artist", `›`.
+- One line: play/pause icon, "Song title – Artist", next-song icon (kept from the old mini player).
 - Light grey background, thin blue progress line on top.
 - Tap the text → "Läuft" screen. Tap the icon → play/pause.
 
@@ -104,7 +104,7 @@ Like the iPod's Now Playing screen:
 - No other animations. If the iPhone has "Reduce Motion" turned on, screens just switch without sliding.
 
 ## Messages
-- Short messages appear at the bottom as a black bar with white text. A link in it (e.g. "Spotify öffnen") is blue.
+- Short messages appear at the bottom as a black bar with white text. A link in it (e.g. "Spotify öffnen") is white, bold and underlined (blue on black is hard to read).
 - They disappear by themselves. No icons, no exclamation marks.
 
 ## What is removed
@@ -114,8 +114,8 @@ Like the iPod's Now Playing screen:
 - The tab bar.
 - Cover images in lists.
 
-## Open questions for you
-1. **Light only, or also dark at night?** I'd suggest light only (simpler, closer to the iPod).
-2. **Cover on the "Läuft" screen:** in color (nice, but adds colors) or in grey scale (stricter, calmer)? I'd suggest color, as it's the only image.
-3. **Click wheel:** a round touch wheel like the iPod would be a fun detail, but harder to use than plain buttons and an extra distraction. I'd suggest not building it.
-4. **Start screen:** the menu shown above, or go straight to "Playlists"?
+## Decisions
+1. Light mode only.
+2. The cover on the "Läuft" screen is the official cover in color.
+3. No click wheel, simple buttons.
+4. The start screen is the menu. The app no longer reopens the last tab.

@@ -30,8 +30,8 @@ Du brauchst: Spotify Premium, ein kostenloses GitHub-Konto und dein iPhone. Die 
 
 ## Gut zu wissen
 - **Die Musik spielt die Spotify-App ab.** Nur Musik ist die Fernbedienung.
-  Steht da „Kein Wiedergabegerät“, öffne Spotify kurz (Link in der Meldung oder im ⋯-Menü), geh zurück und tippe noch einmal.
+  Steht da „Kein Wiedergabegerät“, öffne Spotify kurz (Link in der Meldung oder unter Menü → Einstellungen), geh zurück und tippe noch einmal.
   Läuft die Musik einmal, steuerst du auch über den Sperrbildschirm.
 - **Fremde Playlists** (z. B. von Spotify erstellte) kannst du abspielen. Die Songliste zeigt Spotify seit 2026 aber nur für eigene Playlists an.
-- **Geräte wechseln** (z. B. auf Lautsprecher oder PC): Tippe auf den Mini-Player und dann unten auf den Gerätenamen.
-- Im ⋯-Menü findest du: Abmelden, Client ID ändern.
+- **Geräte wechseln** (z. B. auf Lautsprecher oder PC): Tippe unten auf den Songtitel (oder im Menü auf „Läuft“) und dann auf „Spielt auf“.
+- Unter Menü → Einstellungen findest du: Wiedergabegerät, Spotify öffnen, Abmelden, Client ID ändern.
