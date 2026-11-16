@@ -190,7 +190,7 @@ async function getToken(){
   return LS.get("access_token");
 }
 function logout(){
-  ["access_token","refresh_token","expires_at","pkce_verifier","device"].forEach(k=>LS.del(k));
+  ["access_token","refresh_token","expires_at","pkce_verifier","device","device_chosen"].forEach(k=>LS.del(k));
   location.replace(REDIRECT);
 }
 
@@ -223,27 +223,26 @@ async function api(path, opts={}){
 }
 
 /* ============ Wiedergabe ============ */
-async function findDevice(){
-  const r = await api("/me/player/devices");
-  const ds = (r && r.devices) || [];
-  return ds.find(d=>d.is_active) || ds.find(d=>d.type==="Smartphone") || ds[0] || null;
+// Ziel ist das iPhone oder ein Gerät, das du selbst im Gerätemenü gewählt hast.
+// Lautsprecher (z. B. Echo) werden nie automatisch genommen.
+function isOkDevice(d){ return !!d && (d.type === "Smartphone" || d.id === LS.get("device_chosen")); }
+async function targetDevice(){
+  const ds = ((await api("/me/player/devices")) || {}).devices || [];
+  return ds.find(d => d.id === LS.get("device_chosen")) || ds.find(d => d.type === "Smartphone") || null;
+}
+async function resolveDevice(){
+  try { const d = await targetDevice(); if (!d) noDevice(); return d; }
+  catch(e){ handleErr(e); return null; }
 }
 function noDevice(){
-  toast('Kein Wiedergabegerät gefunden. <a href="spotify:">Spotify kurz öffnen</a>, dann hierher zurück und nochmal tippen.', 8000);
+  toast('Kein Wiedergabegerät: Spotify läuft auf dem iPhone gerade nicht. <a href="spotify:">Spotify kurz öffnen</a>, dann hierher zurück und nochmal tippen. Andere Geräte wählst du über den Mini-Player.', 9000);
 }
-async function play(body){
-  const dev = LS.get("device");
-  try {
-    await api("/me/player/play", {method:"PUT", body, query:{device_id:dev}});
-  } catch(e) {
-    if (e.status === 404 || e.reason === "NO_ACTIVE_DEVICE") {
-      const d = await findDevice().catch(()=>null);
-      if (!d) return noDevice();
-      LS.set("device", d.id);
-      try { await api("/me/player/play", {method:"PUT", body, query:{device_id:d.id}}); }
-      catch(e2){ return handleErr(e2); }
-    } else return handleErr(e);
-  }
+function playingOn(d){ if (!d.is_active) toast("Spielt auf: " + esc(d.name), 2500); }
+async function play(body, d){
+  d = d || await resolveDevice(); if (!d) return;
+  try { await api("/me/player/play", {method:"PUT", body, query:{device_id:d.id}}); }
+  catch(e){ return handleErr(e); }
+  playingOn(d);
   setTimeout(pollPlayer, 500); setTimeout(pollPlayer, 1500);
 }
 function handleErr(e){
@@ -257,22 +256,21 @@ async function ctl(path, method="POST", query){
 }
 const playCtx = (uri, offsetUri) => play(offsetUri ? {context_uri:uri, offset:{uri:offsetUri}} : {context_uri:uri});
 async function shufflePlay(uri){
-  const shuffleOn = id => api("/me/player/shuffle", {method:"PUT", query:{state:true, device_id:id}});
-  try {
-    await shuffleOn(LS.get("device"));
-  } catch(e) {
-    if (e.status !== 404 && e.reason !== "NO_ACTIVE_DEVICE") return handleErr(e);
-    // Kein aktives Gerät: erst eines suchen, damit nur eine Meldung kommt.
-    const d = await findDevice().catch(()=>null);
-    if (!d) return noDevice();
-    LS.set("device", d.id);
-    const ok = await shuffleOn(d.id).then(()=>true, ()=>false);
-    await playCtx(uri);
-    // Ein ruhendes Gerät nimmt Shuffle evtl. erst an, wenn es spielt.
-    if (!ok) shuffleOn(d.id).catch(()=>{});
-    return;
-  }
-  playCtx(uri);
+  const d = await resolveDevice(); if (!d) return;
+  const shuffleOn = () => api("/me/player/shuffle", {method:"PUT", query:{state:true, device_id:d.id}});
+  const ok = await shuffleOn().then(()=>true, ()=>false);
+  await play({context_uri:uri}, d);
+  // Ein ruhendes Gerät nimmt Shuffle evtl. erst an, wenn es spielt.
+  if (!ok) shuffleOn().catch(()=>{});
+}
+async function resume(){
+  // Läuft die Wiedergabe auf einem nicht gewählten Lautsprecher, holen wir sie aufs iPhone.
+  if (isOkDevice(state.device)) return ctl("/me/player/play", "PUT", {device_id: state.device.id});
+  const d = await resolveDevice(); if (!d) return;
+  try { await api("/me/player", {method:"PUT", body:{device_ids:[d.id], play:true}}); }
+  catch(e){ return handleErr(e); }
+  playingOn(d);
+  setTimeout(pollPlayer, 800); setTimeout(pollPlayer, 1800);
 }
 
 /* ============ Player-Status ============ */
@@ -281,7 +279,6 @@ async function pollPlayer(){
   try {
     state = await api("/me/player", {query:{additional_types:"episode"}});
     stateAt = Date.now();
-    if (state && state.device && state.device.id) LS.set("device", state.device.id);
   } catch(e){ /* still */ }
   renderPlayer();
 }
@@ -327,7 +324,7 @@ async function devicePicker(){
     h("div", {class:"actions"}, h("a", {class:"pill", href:"spotify:"}, "Spotify öffnen")));
   for (const d of ds) {
     box.append(h("button", {class:"row", onclick: async () => {
-      closeSheet(); LS.set("device", d.id);
+      closeSheet(); LS.set("device_chosen", d.id);
       try { await api("/me/player", {method:"PUT", body:{device_ids:[d.id], play: !!(state && state.is_playing)}}); }
       catch(e){ return handleErr(e); }
       setTimeout(pollPlayer, 800);
@@ -390,7 +387,7 @@ function openFull(){ $("#full").classList.add("show"); }
 function closeFull(){ $("#full").classList.remove("show"); }
 function togglePlay(){
   if (state && state.is_playing) ctl("/me/player/pause", "PUT");
-  else if (state && state.item) ctl("/me/player/play", "PUT", {device_id: LS.get("device")});
+  else if (state && state.item) resume();
   else toast("Wähle zuerst etwas zum Abspielen aus.");
 }
 function setTitle(t){ $("#title").textContent = t; $("#back").style.display = stack.length ? "grid" : "none"; }
@@ -632,6 +629,7 @@ function loginScreen(errorText){
 
 /* ============ Start ============ */
 async function start(){
+  LS.del("device"); // alter, automatisch gemerkter Lautsprecher
   const params = new URLSearchParams(location.search);
   if (params.get("error")) {
     history.replaceState(null, "", REDIRECT);
