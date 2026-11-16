@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nur Musik">
+<meta name="theme-color" content="#121212">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Nur Musik</title>
+<style>
+  :root{
+    --bg:#121212; --bg2:#1c1c1e; --bg3:#2a2a2d; --fg:#f2f2f2; --mut:#9a9aa0;
+    --acc:#ff9f43; --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font:16px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+  button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+  input{font:inherit}
+  #root{height:100%}
+  #app{display:flex;flex-direction:column;height:100%}
+  header{padding:calc(var(--sat) + 10px) 16px 8px;display:flex;align-items:center;gap:10px;background:var(--bg);flex:none}
+  header h1{font-size:22px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .iconbtn{width:36px;height:36px;border-radius:18px;display:grid;place-items:center;font-size:20px;color:var(--fg)}
+  .iconbtn:active{background:var(--bg3)}
+  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 12px}
+  .row{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}
+  .row:active{background:var(--bg2)}
+  .row img,.row .ph{width:48px;height:48px;border-radius:6px;object-fit:cover;background:var(--bg3);flex:none}
+  .row.round img,.row.round .ph{border-radius:24px}
+  .row .t{flex:1;min-width:0}
+  .row .t b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .t span{display:block;color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row.playing .t b{color:var(--acc)}
+  .num{width:24px;color:var(--mut);text-align:right;flex:none;font-size:14px}
+  .hero{display:flex;flex-direction:column;align-items:center;padding:8px 16px 12px;text-align:center}
+  .hero img{width:200px;height:200px;border-radius:8px;object-fit:cover;background:var(--bg3);box-shadow:0 8px 30px #0008}
+  .hero.round img{border-radius:100px}
+  .hero h2{margin:14px 0 2px;font-size:20px}
+  .hero p{margin:0;color:var(--mut);font-size:14px}
+  .actions{display:flex;gap:10px;justify-content:center;margin-top:14px}
+  .pill{background:var(--acc);color:#111;font-weight:600;padding:10px 22px;border-radius:22px}
+  .pill.sec{background:var(--bg3);color:var(--fg)}
+  .pill:active{opacity:.8}
+  .msg{color:var(--mut);padding:24px 16px;text-align:center}
+  .more{display:block;margin:10px auto;}
+  .search{padding:0 16px 8px}
+  .search input{width:100%;padding:10px 14px;border-radius:10px;border:0;background:var(--bg3);color:var(--fg);outline:none}
+  .sect{padding:14px 16px 4px;color:var(--mut);font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+  /* Mini-Player */
+  #mini{display:none;align-items:center;gap:10px;margin:0 8px;padding:8px;border-radius:10px;background:var(--bg3);flex:none;position:relative;overflow:hidden}
+  #mini.show{display:flex}
+  #mini img{width:42px;height:42px;border-radius:6px;object-fit:cover;background:#333}
+  #mini .t{flex:1;min-width:0}
+  #mini .t b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #mini .t span{display:block;font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #mini .bar{position:absolute;left:0;bottom:0;height:2px;background:var(--acc);width:0}
+  #mini .iconbtn{font-size:22px}
+  nav{display:flex;padding:6px 0 calc(var(--sab) + 6px);background:var(--bg);border-top:1px solid #222;flex:none;margin-top:8px}
+  nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--mut);padding:4px 0}
+  nav button i{font-style:normal;font-size:20px}
+  nav button.on{color:var(--fg)}
+  /* Vollbild-Player */
+  #full{position:fixed;inset:0;background:linear-gradient(#2b2b30,#121212 70%);z-index:10;display:flex;flex-direction:column;
+    padding:calc(var(--sat) + 10px) 24px calc(var(--sab) + 20px);transform:translateY(100%);transition:transform .28s ease}
+  #full.show{transform:none}
+  #full .top{display:flex;justify-content:space-between;align-items:center}
+  #full .cover{flex:1;display:grid;place-items:center;min-height:0;padding:16px 0}
+  #full .cover img{width:min(100%,360px);aspect-ratio:1;border-radius:10px;object-fit:cover;background:#333;box-shadow:0 12px 40px #000a}
+  #full h2{margin:0;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #full .art{color:var(--mut);margin:2px 0 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #full input[type=range]{width:100%;accent-color:var(--acc)}
+  #full .times{display:flex;justify-content:space-between;color:var(--mut);font-size:12px}
+  #full .ctrls{display:flex;justify-content:space-between;align-items:center;margin:14px 0 18px}
+  #full .ctrls .iconbtn{width:52px;height:52px;font-size:28px}
+  #full .ctrls .big{width:72px;height:72px;border-radius:36px;background:var(--fg);color:#111;font-size:30px}
+  #full .ctrls .tog{font-size:20px;color:var(--mut)}
+  #full .ctrls .tog.on{color:var(--acc)}
+  #full .dev{display:flex;justify-content:center}
+  #full .dev button{color:var(--mut);font-size:14px;padding:8px 14px;border-radius:16px;background:#ffffff10}
+  /* Sheet + Toast */
+  #sheet{position:fixed;inset:0;background:#0009;z-index:20;display:none;align-items:flex-end}
+  #sheet.show{display:flex}
+  #sheet .box{background:var(--bg2);width:100%;border-radius:16px 16px 0 0;padding:16px 0 calc(var(--sab) + 16px);max-height:70%;overflow-y:auto}
+  #sheet h3{margin:0 16px 8px;font-size:17px}
+  #toast{position:fixed;left:16px;right:16px;bottom:calc(var(--sab) + 140px);background:#333;color:#fff;padding:12px 14px;border-radius:10px;
+    z-index:30;display:none;font-size:14px;box-shadow:0 6px 24px #0009}
+  #toast.show{display:block}
+  #toast a{color:var(--acc);font-weight:600}
+  /* Setup */
+  .setup{padding:calc(var(--sat) + 30px) 22px 30px;max-width:520px;margin:0 auto;overflow-y:auto;height:100%}
+  .setup h1{font-size:28px;margin:0 0 6px}
+  .setup p,.setup li{color:#cfcfd4;font-size:15px}
+  .setup ol{padding-left:20px}
+  .setup code{background:var(--bg3);padding:2px 6px;border-radius:5px;font-size:13px;word-break:break-all}
+  .setup input{width:100%;padding:12px 14px;border-radius:10px;border:0;background:var(--bg3);color:var(--fg);margin:8px 0 12px}
+  .setup .pill{display:inline-block;margin-top:6px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="sheet"><div class="box" id="sheetBox"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============ Konfiguration ============ */
+const SCOPES = [
+  "user-read-playback-state","user-modify-playback-state","user-read-currently-playing",
+  "playlist-read-private","playlist-read-collaborative","user-library-read","user-follow-read"
+].join(" ");
+const REDIRECT = location.origin + location.pathname;
+const API = "https://api.spotify.com/v1";
+
+/* ============ Hilfsfunktionen ============ */
+const LS = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+const $ = s => document.querySelector(s);
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  if (attrs) for (const [k,v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else el.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : String(c));
+  return el;
+}
+function img(images, size){
+  if (!images || !images.length) return null;
+  const sorted = [...images].sort((a,b)=>(a.width||0)-(b.width||0));
+  return (sorted.find(i => (i.width||640) >= size) || sorted[sorted.length-1]).url;
+}
+function fmt(ms){ ms = Math.max(0, ms|0); const s = Math.floor(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function artists(list){ return (list||[]).map(a=>a.name).join(", "); }
+let toastTimer;
+function toast(html, ms=3500){
+  const t = $("#toast"); t.innerHTML = html; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("show"), ms);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ============ Login (PKCE) ============ */
+function b64url(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+async function login(){
+  const arr = crypto.getRandomValues(new Uint8Array(48));
+  const verifier = b64url(arr);
+  LS.set("pkce_verifier", verifier);
+  const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+  const p = new URLSearchParams({
+    response_type:"code", client_id:LS.get("client_id"), scope:SCOPES,
+    redirect_uri:REDIRECT, code_challenge_method:"S256", code_challenge:challenge
+  });
+  location.href = "https://accounts.spotify.com/authorize?" + p;
+}
+function saveTokens(d){
+  LS.set("access_token", d.access_token);
+  if (d.refresh_token) LS.set("refresh_token", d.refresh_token);
+  LS.set("expires_at", String(Date.now() + (d.expires_in||3600)*1000));
+}
+async function tokenRequest(params){
+  const r = await fetch("https://accounts.spotify.com/api/token", {
+    method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({client_id:LS.get("client_id"), ...params})
+  });
+  const d = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(d.error_description || d.error || ("Token-Fehler " + r.status));
+  saveTokens(d);
+}
+let refreshing = null;
+function refreshToken(){
+  if (!refreshing) {
+    refreshing = tokenRequest({grant_type:"refresh_token", refresh_token:LS.get("refresh_token")})
+      .finally(()=>{ refreshing = null; });
+  }
+  return refreshing;
+}
+async function getToken(){
+  if (Date.now() > Number(LS.get("expires_at")||0) - 60000) await refreshToken();
+  return LS.get("access_token");
+}
+function logout(){
+  ["access_token","refresh_token","expires_at","pkce_verifier","device"].forEach(k=>LS.del(k));
+  location.replace(REDIRECT);
+}
+
+/* ============ API ============ */
+async function api(path, opts={}){
+  const {method="GET", body, query} = opts;
+  const url = new URL(path.startsWith("http") ? path : API + path);
+  if (query) for (const [k,v] of Object.entries(query)) if (v != null && v !== "") url.searchParams.set(k, v);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let token;
+    try { token = await getToken(); }
+    catch(e){ logout(); throw e; }
+    const r = await fetch(url, {
+      method,
+      headers: Object.assign({Authorization:"Bearer " + token}, body ? {"Content-Type":"application/json"} : {}),
+      body: body ? JSON.stringify(body) : undefined
+    });
+    if (r.status === 401 && attempt === 0) { await refreshToken().catch(()=>logout()); continue; }
+    if (r.status === 204 || r.status === 202) return null;
+    const text = await r.text();
+    let data = null; try { data = text ? JSON.parse(text) : null; } catch(e){}
+    if (!r.ok) {
+      const err = new Error((data && data.error && data.error.message) || ("HTTP " + r.status));
+      err.status = r.status; err.reason = data && data.error && data.error.reason;
+      if (r.status === 429) toast("Spotify bremst gerade (zu viele Anfragen). Kurz warten.");
+      throw err;
+    }
+    return data;
+  }
+}
+
+/* ============ Wiedergabe ============ */
+async function findDevice(){
+  const r = await api("/me/player/devices");
+  const ds = (r && r.devices) || [];
+  return ds.find(d=>d.is_active) || ds.find(d=>d.type==="Smartphone") || ds[0] || null;
+}
+function noDevice(){
+  toast('Kein Wiedergabegerät gefunden. <a href="spotify:">Spotify kurz öffnen</a>, dann hierher zurück und nochmal tippen.', 8000);
+}
+async function play(body){
+  const dev = LS.get("device");
+  try {
+    await api("/me/player/play", {method:"PUT", body, query:{device_id:dev}});
+  } catch(e) {
+    if (e.status === 404 || e.reason === "NO_ACTIVE_DEVICE") {
+      const d = await findDevice().catch(()=>null);
+      if (!d) return noDevice();
+      LS.set("device", d.id);
+      try { await api("/me/player/play", {method:"PUT", body, query:{device_id:d.id}}); }
+      catch(e2){ return handleErr(e2); }
+    } else return handleErr(e);
+  }
+  setTimeout(pollPlayer, 500); setTimeout(pollPlayer, 1500);
+}
+function handleErr(e){
+  if (e.status === 404 || e.reason === "NO_ACTIVE_DEVICE") return noDevice();
+  if (e.status === 403) return toast("Das hat Spotify abgelehnt (Premium nötig oder Aktion gerade nicht möglich).");
+  toast("Fehler: " + esc(e.message));
+}
+async function ctl(path, method="POST", query){
+  try { await api(path, {method, query}); } catch(e){ return handleErr(e); }
+  setTimeout(pollPlayer, 400); setTimeout(pollPlayer, 1200);
+}
+const playCtx = (uri, offsetUri) => play(offsetUri ? {context_uri:uri, offset:{uri:offsetUri}} : {context_uri:uri});
+async function shufflePlay(uri){
+  await ctl("/me/player/shuffle", "PUT", {state:true, device_id:LS.get("device")});
+  playCtx(uri);
+}
+
+/* ============ Player-Status ============ */
+let state = null, stateAt = 0, pollTimer = null, seeking = false;
+async function pollPlayer(){
+  try {
+    state = await api("/me/player", {query:{additional_types:"episode"}});
+    stateAt = Date.now();
+    if (state && state.device && state.device.id) LS.set("device", state.device.id);
+  } catch(e){ /* still */ }
+  renderPlayer();
+}
+function curPos(){
+  if (!state) return 0;
+  const p = state.progress_ms + (state.is_playing ? Date.now() - stateAt : 0);
+  return Math.min(p, (state.item && state.item.duration_ms) || p);
+}
+function renderPlayer(){
+  const mini = $("#mini"); if (!mini) return;
+  const it = state && state.item;
+  if (!it) { mini.classList.remove("show"); return; }
+  mini.classList.add("show");
+  const cover = img((it.album && it.album.images) || it.images, 64) || "";
+  const sub = it.artists ? artists(it.artists) : (it.show ? it.show.name : "");
+  $("#mImg").src = cover; $("#mT").textContent = it.name; $("#mS").textContent = sub;
+  $("#mPlay").textContent = state.is_playing ? "⏸" : "▶";
+  $("#fImg").src = img((it.album && it.album.images) || it.images, 600) || "";
+  $("#fT").textContent = it.name; $("#fS").textContent = sub;
+  $("#fPlay").textContent = state.is_playing ? "⏸" : "▶";
+  $("#fShuf").classList.toggle("on", !!state.shuffle_state);
+  const rep = state.repeat_state;
+  $("#fRep").classList.toggle("on", rep !== "off");
+  $("#fRep").textContent = rep === "track" ? "🔂" : "🔁";
+  $("#fDev").textContent = "🔈 " + (state.device ? state.device.name : "Gerät wählen");
+  document.querySelectorAll(".row[data-uri]").forEach(r => r.classList.toggle("playing", r.dataset.uri === it.uri));
+  tick();
+}
+function tick(){
+  if (!state || !state.item) return;
+  const dur = state.item.duration_ms, pos = curPos();
+  $("#mBar").style.width = (pos/dur*100) + "%";
+  if (!seeking) { $("#fRange").max = dur; $("#fRange").value = pos; }
+  $("#fCur").textContent = fmt(seeking ? $("#fRange").value : pos);
+  $("#fDur").textContent = fmt(dur);
+}
+async function devicePicker(){
+  let ds = [];
+  try { ds = ((await api("/me/player/devices")) || {}).devices || []; } catch(e){ return handleErr(e); }
+  const box = $("#sheetBox"); box.innerHTML = "";
+  box.append(h("h3", null, "Abspielen auf"));
+  if (!ds.length) box.append(h("div", {class:"msg"}, "Keine Geräte gefunden. Öffne Spotify kurz auf dem iPhone (oder einem anderen Gerät) und versuche es erneut."),
+    h("div", {class:"actions"}, h("a", {class:"pill", href:"spotify:"}, "Spotify öffnen")));
+  for (const d of ds) {
+    box.append(h("button", {class:"row", onclick: async () => {
+      closeSheet(); LS.set("device", d.id);
+      try { await api("/me/player", {method:"PUT", body:{device_ids:[d.id], play: !!(state && state.is_playing)}}); }
+      catch(e){ return handleErr(e); }
+      setTimeout(pollPlayer, 800);
+    }}, h("div", {class:"ph", style:"display:grid;place-items:center;font-size:22px"}, d.type==="Smartphone"?"📱":d.type==="Computer"?"💻":"🔈"),
+      h("div", {class:"t"}, h("b", null, d.name + (d.is_active ? "  ✓" : "")), h("span", null, d.type))));
+  }
+  $("#sheet").classList.add("show");
+}
+function closeSheet(){ $("#sheet").classList.remove("show"); }
+$("#sheet").addEventListener("click", e => { if (e.target.id === "sheet") closeSheet(); });
+
+/* ============ Ansichten ============ */
+let me = null, tab = "playlists", stack = [];
+const TABS = [
+  ["playlists","♫","Playlists"], ["songs","♥","Songs"], ["albums","◉","Alben"],
+  ["artists","☺","Künstler"], ["search","⌕","Suche"]
+];
+function shell(){
+  const root = $("#root"); root.innerHTML = "";
+  root.append(h("div", {id:"app"},
+    h("header", null,
+      h("button", {class:"iconbtn", id:"back", style:"display:none", onclick: goBack}, "‹"),
+      h("h1", {id:"title"}, ""),
+      h("button", {class:"iconbtn", onclick: settings}, "⋯")),
+    h("main", {id:"main"}),
+    h("div", {id:"mini", onclick: e => { if (!e.target.closest(".iconbtn")) openFull(); }},
+      h("img", {id:"mImg", alt:""}),
+      h("div", {class:"t"}, h("b", {id:"mT"}), h("span", {id:"mS"})),
+      h("button", {class:"iconbtn", id:"mPlay", onclick: togglePlay}, "▶"),
+      h("button", {class:"iconbtn", onclick: () => ctl("/me/player/next")}, "⏭"),
+      h("div", {class:"bar", id:"mBar"})),
+    h("nav", null, TABS.map(([id,ic,label]) =>
+      h("button", {"data-tab":id, onclick: () => switchTab(id)}, h("i", null, ic), label)))
+  ));
+  root.append(h("div", {id:"full"},
+    h("div", {class:"top"},
+      h("button", {class:"iconbtn", onclick: closeFull, style:"font-size:26px"}, "⌄"),
+      h("span", {style:"color:var(--mut);font-size:13px"}, "Läuft gerade"),
+      h("span", {style:"width:36px"})),
+    h("div", {class:"cover"}, h("img", {id:"fImg", alt:""})),
+    h("h2", {id:"fT"}), h("div", {class:"art", id:"fS"}),
+    h("input", {type:"range", id:"fRange", min:0, max:1, value:0,
+      oninput: () => { seeking = true; tick(); },
+      onchange: async e => { const v = e.target.value; await ctl("/me/player/seek", "PUT", {position_ms: v}); seeking = false; }}),
+    h("div", {class:"times"}, h("span", {id:"fCur"}, "0:00"), h("span", {id:"fDur"}, "0:00")),
+    h("div", {class:"ctrls"},
+      h("button", {class:"iconbtn tog", id:"fShuf", onclick: () => ctl("/me/player/shuffle", "PUT", {state: !(state && state.shuffle_state)})}, "🔀"),
+      h("button", {class:"iconbtn", onclick: () => ctl("/me/player/previous")}, "⏮"),
+      h("button", {class:"iconbtn big", id:"fPlay", onclick: togglePlay}, "▶"),
+      h("button", {class:"iconbtn", onclick: () => ctl("/me/player/next")}, "⏭"),
+      h("button", {class:"iconbtn tog", id:"fRep", onclick: () => {
+        const order = ["off","context","track"]; const cur = (state && state.repeat_state) || "off";
+        ctl("/me/player/repeat", "PUT", {state: order[(order.indexOf(cur)+1) % 3]});
+      }}, "🔁")),
+    h("div", {class:"dev"}, h("button", {id:"fDev", onclick: devicePicker}, "🔈 Gerät"))
+  ));
+}
+function openFull(){ $("#full").classList.add("show"); }
+function closeFull(){ $("#full").classList.remove("show"); }
+function togglePlay(){
+  if (state && state.is_playing) ctl("/me/player/pause", "PUT");
+  else if (state && state.item) ctl("/me/player/play", "PUT", {device_id: LS.get("device")});
+  else toast("Wähle zuerst etwas zum Abspielen aus.");
+}
+function setTitle(t){ $("#title").textContent = t; $("#back").style.display = stack.length ? "grid" : "none"; }
+function switchTab(id){
+  tab = id; stack = [];
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === id));
+  render();
+}
+function push(view){ stack.push(view); render(); }
+function goBack(){ stack.pop(); render(); }
+function render(){
+  const main = $("#main"); main.innerHTML = ""; main.scrollTop = 0;
+  const view = stack.length ? stack[stack.length-1] : {type:tab};
+  const fn = VIEWS[view.type];
+  fn(main, view).catch(e => { main.append(h("div", {class:"msg"}, "Konnte nicht laden: " + e.message)); });
+  setTimeout(renderPlayer, 0);
+}
+function row(o){
+  return h("button", {class:"row" + (o.round ? " round" : ""), "data-uri": o.uri, onclick: o.onclick},
+    o.num != null ? h("span", {class:"num"}, o.num) : null,
+    o.noimg ? null : (o.img ? h("img", {src:o.img, alt:"", loading:"lazy"}) : h("div", {class:"ph"})),
+    h("div", {class:"t"}, h("b", null, o.title), o.sub ? h("span", null, o.sub) : null));
+}
+function loading(main){ const m = h("div", {class:"msg"}, "Lädt …"); main.append(m); return m; }
+async function pager(main, firstUrl, query, mapItem, onPage){
+  let next = firstUrl, q = query, list = h("div"); main.append(list);
+  const btn = h("button", {class:"pill sec more", style:"display:none"}, "Mehr laden");
+  main.append(btn);
+  async function load(){
+    btn.style.display = "none";
+    const l = h("div", {class:"msg"}, "Lädt …"); list.after(l);
+    const d = await api(next, {query:q}); q = null; l.remove();
+    const items = (d.items || []).filter(Boolean);
+    if (onPage) onPage(items, list);
+    if (mapItem) items.forEach((it, i) => { const r = mapItem(it, i); if (r) list.append(r); });
+    if (!list.children.length) list.append(h("div", {class:"msg"}, "Nichts gefunden."));
+    next = d.next; if (next) btn.style.display = "block";
+    renderPlayer();
+  }
+  btn.onclick = load;
+  await load();
+}
+
+const VIEWS = {
+  async playlists(main){
+    setTitle("Playlists");
+    main.append(row({img:null, title:"Lieblingssongs", sub:"Deine gespeicherten Songs", onclick: () => switchTab("songs")}));
+    await pager(main, "/me/playlists", {limit:50}, p => row({
+      img: img(p.images, 100), title: p.name,
+      sub: (p.owner && p.owner.display_name ? p.owner.display_name : "") ,
+      onclick: () => push({type:"playlist", p})
+    }));
+  },
+  async songs(main){
+    setTitle("Lieblingssongs");
+    const all = [];
+    main.append(h("div", {class:"actions", style:"margin:4px 0 8px"},
+      h("button", {class:"pill", onclick: () => all.length && play({uris: all.slice(0,200).map(t=>t.uri)})}, "▶ Abspielen"),
+      h("button", {class:"pill sec", onclick: async () => {
+        if (!all.length) return;
+        const u = all.map(t=>t.uri);
+        for (let i = u.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [u[i],u[j]] = [u[j],u[i]]; }
+        play({uris: u.slice(0,200)});
+      }}, "🔀 Zufall")));
+    await pager(main, "/me/tracks", {limit:50}, null, (items, list) => {
+      const startIdx = all.length;
+      items.forEach(x => x.track && all.push(x.track));
+      all.slice(startIdx).forEach((t, k) => {
+        const idx = startIdx + k;
+        list.append(row({uri:t.uri, img: img(t.album && t.album.images, 64), title:t.name, sub:artists(t.artists),
+          onclick: () => play({uris: all.slice(idx, idx+200).map(x=>x.uri)})}));
+      });
+    });
+  },
+  async albums(main){
+    setTitle("Alben");
+    await pager(main, "/me/albums", {limit:50}, x => x.album && row({
+      img: img(x.album.images, 100), title: x.album.name, sub: artists(x.album.artists),
+      onclick: () => push({type:"album", id:x.album.id})
+    }));
+  },
+  async artists(main){
+    setTitle("Künstler");
+    const list = h("div"); main.append(list);
+    const btn = h("button", {class:"pill sec more", style:"display:none"}, "Mehr laden"); main.append(btn);
+    let after = null;
+    async function load(){
+      btn.style.display = "none";
+      const l = loading(main);
+      const d = await api("/me/following", {query:{type:"artist", limit:50, after}}); l.remove();
+      const a = d.artists || {};
+      (a.items||[]).forEach(ar => list.append(row({round:true, img: img(ar.images, 100), title: ar.name, sub:"Künstler",
+        onclick: () => push({type:"artist", ar})})));
+      if (!list.children.length) list.append(h("div", {class:"msg"}, "Du folgst noch keinen Künstlern."));
+      after = a.cursors && a.cursors.after; if (a.next && after) btn.style.display = "block";
+    }
+    btn.onclick = load; await load();
+  },
+  async search(main){
+    setTitle("Suche");
+    const inp = h("input", {type:"search", placeholder:"Songs, Alben, Künstler, Playlists", enterkeyhint:"search", autocomplete:"off"});
+    const res = h("div");
+    main.append(h("div", {class:"search"}, inp), res);
+    let timer, seq = 0;
+    const last = LS.get("last_q") || "";
+    inp.value = last;
+    async function run(){
+      const q = inp.value.trim(); LS.set("last_q", q);
+      res.innerHTML = ""; if (!q) return;
+      const my = ++seq; const l = loading(res);
+      let d;
+      try { d = await api("/search", {query:{q, type:"track,artist,album,playlist", limit:10}}); }
+      catch(e){ l.remove(); res.append(h("div", {class:"msg"}, "Fehler: " + e.message)); return; }
+      if (my !== seq) return; l.remove();
+      const tr = ((d.tracks||{}).items||[]).filter(Boolean);
+      const ar = ((d.artists||{}).items||[]).filter(Boolean);
+      const al = ((d.albums||{}).items||[]).filter(Boolean);
+      const pl = ((d.playlists||{}).items||[]).filter(Boolean);
+      if (tr.length) { res.append(h("div", {class:"sect"}, "Songs"));
+        tr.forEach(t => res.append(row({uri:t.uri, img: img(t.album && t.album.images, 64), title:t.name, sub:artists(t.artists),
+          onclick: () => t.album ? playCtx(t.album.uri, t.uri) : play({uris:[t.uri]})}))); }
+      if (ar.length) { res.append(h("div", {class:"sect"}, "Künstler"));
+        ar.slice(0,5).forEach(a => res.append(row({round:true, img: img(a.images, 100), title:a.name, sub:"Künstler", onclick: () => push({type:"artist", ar:a})}))); }
+      if (al.length) { res.append(h("div", {class:"sect"}, "Alben"));
+        al.forEach(a => res.append(row({img: img(a.images, 100), title:a.name, sub:artists(a.artists), onclick: () => push({type:"album", id:a.id})}))); }
+      if (pl.length) { res.append(h("div", {class:"sect"}, "Playlists"));
+        pl.forEach(p => res.append(row({img: img(p.images, 100), title:p.name, sub:(p.owner && p.owner.display_name)||"", onclick: () => push({type:"playlist", p})}))); }
+      if (!tr.length && !ar.length && !al.length && !pl.length) res.append(h("div", {class:"msg"}, "Nichts gefunden."));
+      renderPlayer();
+    }
+    inp.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(run, 400); });
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") { clearTimeout(timer); inp.blur(); run(); } });
+    if (last) run();
+  },
+  async playlist(main, {p}){
+    setTitle(p.name);
+    const owner = (p.owner && p.owner.display_name) || "";
+    main.append(h("div", {class:"hero"},
+      h("img", {src: img(p.images, 300) || "", alt:""}), h("h2", null, p.name), h("p", null, owner),
+      h("div", {class:"actions"},
+        h("button", {class:"pill", onclick: () => playCtx(p.uri)}, "▶ Abspielen"),
+        h("button", {class:"pill sec", onclick: () => shufflePlay(p.uri)}, "🔀 Zufall"))));
+    // Spotify liefert Songlisten nur für eigene oder gemeinsame Playlists.
+    const mine = me && p.owner && p.owner.id === me.id;
+    if (!mine && !p.collaborative) {
+      main.append(h("div", {class:"msg"}, "Die Songliste fremder Playlists gibt Spotify nicht mehr heraus, abspielen geht aber."));
+      return;
+    }
+    try {
+      let n = 0;
+      await pager(main, "/playlists/" + p.id + "/items", {limit:50}, x => {
+        const t = x.item || x.track; if (!t || !t.uri) return null; n++;
+        return row({uri:t.uri, img: img((t.album && t.album.images) || t.images, 64), title:t.name,
+          sub: t.artists ? artists(t.artists) : (t.show ? t.show.name : ""), onclick: () => playCtx(p.uri, t.uri)});
+      });
+    } catch(e){
+      main.append(h("div", {class:"msg"}, "Songliste nicht verfügbar – abspielen geht trotzdem."));
+    }
+  },
+  async album(main, {id}){
+    setTitle("Album");
+    const l = loading(main);
+    const a = await api("/albums/" + id); l.remove();
+    setTitle(a.name);
+    main.append(h("div", {class:"hero"},
+      h("img", {src: img(a.images, 300) || "", alt:""}), h("h2", null, a.name),
+      h("p", null, artists(a.artists) + (a.release_date ? " · " + a.release_date.slice(0,4) : "")),
+      h("div", {class:"actions"},
+        h("button", {class:"pill", onclick: () => playCtx(a.uri)}, "▶ Abspielen"),
+        h("button", {class:"pill sec", onclick: () => shufflePlay(a.uri)}, "🔀 Zufall"))));
+    await pager(main, "/albums/" + id + "/tracks", {limit:50}, (t) => row({
+      uri:t.uri, noimg:true, num:t.track_number, title:t.name, sub:artists(t.artists) + " · " + fmt(t.duration_ms),
+      onclick: () => playCtx(a.uri, t.uri)
+    }));
+  },
+  async artist(main, {ar}){
+    setTitle(ar.name);
+    main.append(h("div", {class:"hero round"},
+      h("img", {src: img(ar.images, 300) || "", alt:""}), h("h2", null, ar.name),
+      h("div", {class:"actions"},
+        h("button", {class:"pill", onclick: () => playCtx(ar.uri)}, "▶ Abspielen"),
+        h("button", {class:"pill sec", onclick: () => shufflePlay(ar.uri)}, "🔀 Zufall"))));
+    main.append(h("div", {class:"sect"}, "Alben & Singles"));
+    await pager(main, "/artists/" + ar.id + "/albums", {include_groups:"album,single", limit:10}, a => row({
+      img: img(a.images, 100), title:a.name, sub: (a.album_type === "single" ? "Single" : "Album") + (a.release_date ? " · " + a.release_date.slice(0,4) : ""),
+      onclick: () => push({type:"album", id:a.id})
+    }));
+  }
+};
+
+function settings(){
+  const box = $("#sheetBox"); box.innerHTML = "";
+  box.append(h("h3", null, "Nur Musik" + (me ? " – " + (me.display_name || me.id) : "")),
+    h("button", {class:"row", onclick: () => { closeSheet(); devicePicker(); }}, h("div", {class:"t"}, h("b", null, "Wiedergabegerät wählen"))),
+    h("a", {class:"row", href:"spotify:", style:"color:inherit;text-decoration:none"}, h("div", {class:"t"}, h("b", null, "Spotify-App öffnen"), h("span", null, "Falls kein Gerät gefunden wird"))),
+    h("button", {class:"row", onclick: logout}, h("div", {class:"t"}, h("b", null, "Abmelden"))),
+    h("button", {class:"row", onclick: () => { LS.del("client_id"); logout(); }}, h("div", {class:"t"}, h("b", null, "Client ID ändern"), h("span", null, "Setzt die App zurück"))));
+  $("#sheet").classList.add("show");
+}
+
+/* ============ Einrichtung ============ */
+function setupScreen(errorText){
+  const root = $("#root"); root.innerHTML = "";
+  const inp = h("input", {placeholder:"Client ID einfügen", autocomplete:"off", autocapitalize:"off", spellcheck:"false"});
+  root.append(h("div", {class:"setup"},
+    h("h1", null, "Nur Musik"),
+    h("p", null, "Deine Spotify-Bibliothek ohne Feed und Vorschläge. Einmalige Einrichtung:"),
+    errorText ? h("p", {style:"color:#ff6b6b"}, errorText) : null,
+    h("ol", null,
+      h("li", null, "Öffne developer.spotify.com/dashboard und melde dich mit deinem Spotify-Konto an (Premium nötig)."),
+      h("li", null, "„Create app“: beliebiger Name, bei „Which API/SDKs“ Web API anhaken."),
+      h("li", null, "Als Redirect URI genau diese Adresse eintragen:", h("br"), h("code", null, REDIRECT)),
+      h("li", null, "Speichern, dann die Client ID kopieren und hier einfügen.")),
+    inp,
+    h("button", {class:"pill", onclick: () => {
+      const v = inp.value.trim();
+      if (!/^[0-9a-f]{32}$/i.test(v)) { toast("Das sieht nicht wie eine Client ID aus (32 Zeichen)."); return; }
+      LS.set("client_id", v); login();
+    }}, "Weiter zur Anmeldung")));
+}
+function loginScreen(errorText){
+  const root = $("#root"); root.innerHTML = "";
+  root.append(h("div", {class:"setup"},
+    h("h1", null, "Nur Musik"),
+    errorText ? h("p", {style:"color:#ff6b6b"}, errorText) : h("p", null, "Melde dich mit Spotify an."),
+    h("button", {class:"pill", onclick: login}, "Mit Spotify anmelden"),
+    h("p", {style:"margin-top:30px"}, h("a", {href:"#", style:"color:var(--mut)", onclick: e => { e.preventDefault(); LS.del("client_id"); setupScreen(); }}, "Client ID ändern"))));
+}
+
+/* ============ Start ============ */
+async function start(){
+  const params = new URLSearchParams(location.search);
+  if (params.get("error")) {
+    history.replaceState(null, "", REDIRECT);
+    return LS.get("client_id") ? loginScreen("Anmeldung abgebrochen: " + params.get("error")) : setupScreen();
+  }
+  if (!LS.get("client_id")) return setupScreen();
+  if (params.get("code")) {
+    try {
+      await tokenRequest({grant_type:"authorization_code", code:params.get("code"), redirect_uri:REDIRECT, code_verifier:LS.get("pkce_verifier")});
+    } catch(e) {
+      history.replaceState(null, "", REDIRECT);
+      return loginScreen("Anmeldung fehlgeschlagen: " + e.message + ". Stimmt die Redirect URI im Spotify-Dashboard?");
+    }
+    history.replaceState(null, "", REDIRECT);
+  }
+  if (!LS.get("refresh_token")) return loginScreen();
+  shell();
+  try { me = await api("/me"); }
+  catch(e) {
+    if (e.status === 403) return loginScreen("Spotify verweigert den Zugriff. Ist dein Konto im Dashboard unter „User Management“ eingetragen und hast du Premium?");
+  }
+  switchTab(LS.get("tab") || "playlists");
+  pollPlayer();
+  pollTimer = setInterval(() => { if (!document.hidden) pollPlayer(); }, 4000);
+  setInterval(tick, 500);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) pollPlayer(); });
+}
+const _switch = switchTab;
+switchTab = function(id){ LS.set("tab", id); _switch(id); };
+start();
+</script>
+</body>
+</html>
