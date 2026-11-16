@@ -395,7 +395,7 @@ function togglePlay(){
 }
 function setTitle(t){ $("#title").textContent = t; $("#back").style.display = stack.length ? "grid" : "none"; }
 function switchTab(id){
-  tab = id; stack = [];
+  tab = id; stack = []; LS.set("tab", id);
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === id));
   render();
 }
@@ -660,8 +660,6 @@ async function start(){
   setInterval(tick, 500);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) pollPlayer(); });
 }
-const _switch = switchTab;
-switchTab = function(id){ LS.set("tab", id); _switch(id); };
 start();
 </script>
 </body>
